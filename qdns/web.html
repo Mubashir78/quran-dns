@@ -1,9 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
 <title>Qur'an Reader</title>
+<script>
+/* Theme first: stored choice wins, otherwise manuscript night. */
+try {
+  document.documentElement.dataset.theme =
+    localStorage.getItem("qr-theme") || "dark";
+} catch (e) { document.documentElement.dataset.theme = "dark"; }
+</script>
 <style>
   /* Self-hosted Noto Naskh Arabic: covers Quranic marks U+06E1/06E2/06E5
      that phone system fonts often lack (boxes). Served at /font/naskh. */
@@ -24,8 +32,27 @@
     --ink: #1E2A24;
     --soft-ink: #4A564F;
     --emerald: #0E6B4F;
+    --accent: #0E6B4F;
     --gold: #A87E1F;
     --rule: #D8CFB8;
+    --card: #FFFDF7;
+    --card-soft: rgba(255, 253, 247, .55);
+    --frame-bg: rgba(255, 255, 255, .35);
+    --error: #8C2F1B;
+  }
+  /* Manuscript night: same gold/emerald language, parchment text on
+     deep ink-green. Button emerald stays deep so white labels pass. */
+  html[data-theme="dark"] {
+    --paper: #131915;
+    --ink: #ECE3CB;
+    --soft-ink: #9FAB9C;
+    --accent: #5CC99A;
+    --gold: #D2A94F;
+    --rule: #2E3B33;
+    --card: #1B231E;
+    --card-soft: rgba(24, 31, 27, .72);
+    --frame-bg: rgba(255, 255, 255, .045);
+    --error: #E89B8A;
   }
   * { box-sizing: border-box; }
   body {
@@ -42,6 +69,16 @@
     position: relative;
     isolation: isolate; /* keep animated wash + lattice behind the text */
   }
+  html[data-theme="dark"] body {
+    background:
+      radial-gradient(60em 22em at 50% -6em, rgba(210, 169, 79, .10), transparent 70%),
+      radial-gradient(50em 30em at 50% 110%, rgba(92, 201, 154, .10), transparent 70%),
+      linear-gradient(#161D19, #131915 30%, #0D110E);
+  }
+  html[data-theme="dark"] body::before {
+    opacity: .07;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%232E7D5B' stroke-width='1'%3E%3Crect x='22' y='22' width='28' height='28'/%3E%3Crect x='22' y='22' width='28' height='28' transform='rotate(45 36 36)'/%3E%3Ccircle cx='36' cy='36' r='4'/%3E%3C/g%3E%3C/svg%3E");
+  }
   /* Wide screens: room for Arabic + translation side by side. */
   @media (min-width: 55em) {
     body { max-width: 62em; }
@@ -56,7 +93,7 @@
       padding: 1.5em;
       border: 1px solid var(--rule);
       border-radius: .6em;
-      background: rgba(255, 253, 247, .55);
+      background: var(--card-soft);
     }
     #verseblock:has(.passage) { display: block; }
     .passage { margin-bottom: 1em; }
@@ -79,7 +116,7 @@
     #verseblock > .translation, .passage > .translation {
       border: 1px solid rgba(168, 126, 31, .35);
       border-radius: .45em;
-      background: rgba(255, 255, 255, .35);
+      background: var(--frame-bg);
       padding: 1em 1.1em;
     }
   }
@@ -121,7 +158,7 @@
     padding: .5em .7em;
     border: 1px solid var(--rule);
     border-radius: 6px;
-    background: #FFFDF7;
+    background: var(--card);
     color: var(--ink);
   }
   .controls button {
@@ -232,7 +269,7 @@
     min-height: 1.5em;
     margin-top: .25em;
   }
-  .verify { color: var(--emerald); }
+  .verify { color: var(--accent); }
   .daily {
     border-top: 1px solid var(--rule);
     padding: 1.25em 0 0;
@@ -272,7 +309,7 @@
     min-height: 44px;
     border: 1px solid var(--rule);
     border-radius: 6px;
-    background: #FFFDF7;
+    background: var(--card);
     color: var(--soft-ink);
     cursor: pointer;
   }
@@ -290,13 +327,13 @@
     .daily { padding: .9em 1em; }
   }
   .field label { font-size: .8rem; color: var(--soft-ink); text-align: left; }
-  .field-error { color: #8C2F1B; font-size: .85rem; min-height: 1.2em; }
+  .field-error { color: var(--error); font-size: .85rem; min-height: 1.2em; }
   .results { max-width: 34em; margin: 0 auto 1em; }
   .results button {
     display: block; width: 100%; text-align: left;
     font-size: .95rem; padding: .55em .8em; min-height: 44px;
     border: 1px solid var(--rule); border-radius: 6px;
-    background: #FFFDF7; color: var(--ink); cursor: pointer;
+    background: var(--card); color: var(--ink); cursor: pointer;
     margin-bottom: .4em;
   }
   .results button small { color: var(--soft-ink); display: block; }
@@ -324,7 +361,7 @@
     padding: .45em .9em;
     border: 1px solid var(--rule);
     border-radius: 6px;
-    background: #FFFDF7;
+    background: var(--card);
     color: var(--ink);
     cursor: pointer;
   }
@@ -356,7 +393,7 @@
   .more .nav { margin-top: .5em; }
   .keysbtn kbd {
     border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px;
-    background: #FFFDF7; padding: 0 .4em; font-size: .8em; font-family: inherit;
+    background: var(--card); padding: 0 .4em; font-size: .8em; font-family: inherit;
   }
   dialog#keys { border: 1px solid var(--gold); border-radius: 10px; padding: 0;
     max-width: min(26em, 92vw); background: var(--paper); color: var(--ink); }
@@ -373,7 +410,7 @@
   }
   dialog#keys .krow kbd {
     border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px;
-    background: #FFFDF7; padding: 0 .5em; font-size: .8rem; white-space: nowrap;
+    background: var(--card); padding: 0 .5em; font-size: .8rem; white-space: nowrap;
   }
   dialog#keys .kclose { margin-top: 1.25em; width: 100%; }
   /* Breathing room between expanded actions and the search box. */
@@ -449,6 +486,7 @@
     <button type="button" id="shrink" class="ghost" aria-label="Smaller Arabic text">A−</button>
     <button type="button" id="grow" class="ghost" aria-label="Larger Arabic text">A+</button>
     <button type="button" id="keysbtn" class="ghost keysbtn" aria-keyshortcuts="?">Keys <kbd>?</kbd></button>
+    <button type="button" id="theme" class="ghost" aria-pressed="true" title="Switch manuscript light / night">☾ Night</button>
   </div>
 </details>
 <dialog id="keys" aria-labelledby="keystitle">
@@ -728,6 +766,18 @@ document.getElementById("memorize").addEventListener("click", function () {
   memorize = !memorize;
   this.setAttribute("aria-pressed", memorize ? "true" : "false");
   applyMemorize();
+});
+var themeBtn = document.getElementById("theme");
+function applyTheme(dark) {
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  themeBtn.setAttribute("aria-pressed", dark ? "true" : "false");
+  themeBtn.textContent = dark ? "☾ Night" : "☀ Day";
+  try { localStorage.setItem("qr-theme", dark ? "dark" : "light"); } catch (e) {}
+}
+/* Head script already applied the stored choice (or night); sync label. */
+applyTheme(document.documentElement.dataset.theme !== "light");
+themeBtn.addEventListener("click", function () {
+  applyTheme(document.documentElement.dataset.theme !== "dark");
 });
 var fontBtn = document.getElementById("fonttoggle");
 function applyFont(nastaliq) {
@@ -1032,9 +1082,9 @@ document.getElementById("save").addEventListener("click", function () {
 });
 renderSaved();
 show(1, 1);
-/* Diagonal dot-matrix wave (emerald dots on paper: alpha + lift follow
-   a travelling Gaussian pulse). Static single frame under
-   prefers-reduced-motion. */
+/* Diagonal dot-matrix wave (accent dots: emerald on paper, mint on
+   night: alpha + lift follow a travelling Gaussian pulse). Static
+   single frame under prefers-reduced-motion. */
 (function () {
   var cv = document.getElementById("wave");
   var ctx = cv.getContext("2d");
@@ -1049,6 +1099,9 @@ show(1, 1);
   }
   function paint(sec) {
     ctx.clearRect(0, 0, W, H);
+    var dark = document.documentElement.dataset.theme !== "light";
+    var dot = dark ? "92,201,154," : "14,107,79,";
+    var peak = dark ? 0.26 : 0.20;
     var n = cols + rows, l = 0.08 * sec;
     var o = (l - 0.5 / (2 * Math.PI) * Math.sin(2 * Math.PI * l)) % 1;
     for (var e = 0; e < rows; e++) for (var t = 0; t < cols; t++) {
@@ -1057,7 +1110,7 @@ show(1, 1);
       if (a < -0.5) a += 1;
       var r = Math.exp(-(a * a) / 0.0144);
       if (r < 0.01) continue;
-      ctx.fillStyle = "rgba(14,107,79," + (r * r * 0.20).toFixed(3) + ")";
+      ctx.fillStyle = "rgba(" + dot + (r * r * peak).toFixed(3) + ")";
       ctx.fillRect(9 * t - 5, 9 * e - 5 - 5 * r, 4, 4);
     }
   }

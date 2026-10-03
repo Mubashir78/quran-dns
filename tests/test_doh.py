@@ -164,6 +164,11 @@ class DohTest(unittest.TestCase):
         self.assertIn('aria-keyshortcuts="n"', body)
         self.assertIn('getElementById("q").focus()', body)
         self.assertIn('id="keys"', body)
+        # Night theme is the default; day stays one tap away, remembered.
+        self.assertIn('data-theme="dark"', body)
+        self.assertIn('id="theme"', body)
+        self.assertIn("qr-theme", body)
+        self.assertIn("--card", body)
 
 
 if __name__ == "__main__":

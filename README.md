@@ -1,99 +1,124 @@
-# qdns — Qur'an over DNS (prototype)
+# qdns — Qur'an over DNS
 
-Fetch any verse (Arabic, English, Urdu) with an ordinary DNS TXT query.
-Built with Python 3.10+, `dnspython` and `asyncio`.
+Fetch any of the 6,236 Qur'an verses (Arabic + English + Urdu) with an
+ordinary DNS TXT query. A Python + `asyncio` authoritative server answers
+from an in-memory corpus; clients can be `dig`, the bundled CLI, a terminal
+script with proper Arabic shaping, a web reader page, or even SMS/WhatsApp
+style text messages via a phone gateway.
+
+Built with Python 3.10+, `dnspython`, `asyncio`, and stdlib-only HTTP for DoH.
+
+## Features
+
+- **DNS core** — authoritative UDP + TCP server for zone `quran.test.`;
+  verses as TXT records (`<surah>-<ayah>.<lang>`), `help` text at the apex.
+- **Modern DNS behavior** — EDNS0 payload negotiation (server max 1232),
+  apex SOA/NS, SOA in NXDOMAIN/NODATA (negative caching), TC-empty + TCP
+  fallback for answers over the UDP budget.
+- **DNSSEC island** — Ed25519-signed apex (SOA/NS/DNSKEY) with DO-bit
+  RRSIGs; verses served unsigned (documented limitation).
+- **DNS-over-HTTPS** — RFC 8484 GET/POST endpoint reusing the same
+  resolver, plus a self-hosted **reader page** (search, range view,
+  memorize mode, khatmah tracker, verify button).
+- **SMS gateway** — text `112:4 en` from any phone, get Arabic + translation
+  back (Android phone as gateway, inbox polling).
+- **Terminal CLI** — `scripts/verse` with Arabic shaping, REPL, ranges,
+  JSON output.
+- **Ops** — per-IP token-bucket rate limiting, `scripts/bench.py`
+  (UDP/TCP QPS + p50/p99).
 
 ## Quick start
 
     pip install -r requirements.txt
-    python -m unittest                          # 18 tests
-    python -m qdns --port 5353                  # terminal 1: server (UDP+TCP)
-    python -m qdns.client 2:255 -l en -v        # terminal 2: client
+    python -m unittest                        # 94 tests
+    python -m qdns.server --port 5453         # DNS (UDP+TCP); --doh-port 8053 adds DoH
 
-With `dig` (if installed):
+Port 53 needs root; 5353 is the code default. On machines running
+Avahi/mDNS (which owns UDP 5353 system-wide), use `--port 5453`.
 
-    dig @127.0.0.1 -p 5353 2-255.en.quran.test TXT +short
-    dig @127.0.0.1 -p 5353 help.quran.test TXT +short
+## Usage examples
 
-Port 53 needs root; the default 5353 does not. `data/quran.json` is bundled;
-rebuild it with `python scripts/fetch_data.py`.
+**dig (any verse, English):**
+
+    dig @127.0.0.1 -p 5453 2-255.en.quran.test TXT +short
+    dig @127.0.0.1 -p 5453 help.quran.test TXT +short
+    dig @127.0.0.1 -p 5453 quran.test SOA +short
+
+**Bundled DNS client (auto UDP→TCP fallback on truncation):**
+
+    python -m qdns.client 2:255 -l en -v
+    python -m qdns.client 2:282 -l ur        # long verse, transparently uses TCP
+
+**Terminal reader (shaped Arabic, REPL, ranges):**
+
+    scripts/verse 112:4 -l en                 # Arabic + English
+    scripts/verse 2:255-257 -l ur             # passage (max 20 verses)
+    scripts/verse                             # interactive REPL (try: help)
+    scripts/verse 112:4 --json                # machine-readable
+
+**DNS-over-HTTPS + reader page:**
+
+    python -m qdns.server --port 5453 --doh-port 8053
+    # reader page:
+    xdg-open http://127.0.0.1:8053/
+    # raw DoH query (RFC 8484):
+    curl -s 'http://127.0.0.1:8053/dns-query?dns=<base64url-wire>' \
+      -H 'accept: application/dns-message' | xxd | head
+
+**SMS (needs an Android phone running SMS Gateway for Android on the same LAN):**
+
+    python -m qdns.server --port 5453 --sms-base-url http://<phone>:8080 \
+        --sms-username qdns --sms-password <pass> --sms-smsgate --sms-poll
+    # from any phone, text:  112:4 en   -> Arabic + English verse replies
+
+**DNSSEC keys + benchmark:**
+
+    python scripts/keygen.py                  # Ed25519 KSK+ZSK into keys/ (gitignored)
+    python scripts/bench.py --port 5453       # UDP/TCP QPS, p50/p99, TC rate
 
 ## Name scheme
 
     <surah>-<ayah>.<lang>.quran.test.     lang: ar (default) | en | ur
     help.quran.test.  (or the zone apex)  usage text
 
-Responses: NOERROR+TXT (found) · NXDOMAIN (no such verse/lang) ·
-NOERROR/empty (non-TXT type) · REFUSED (outside our zone).
-
-## Code flow
-
-    client: qdns.client / dig
-       |  TXT? 2-255.en.quran.test
-       v
-    +-----------------------------+
-    | server.py  (asyncio)        |
-    |  UDP 5353      TCP 5353     |
-    |  datagram_     2-byte len   |
-    |  received      prefix       |
-    +--------------+--------------+
-                   v
-            process(bytes)
-             from_wire()
-                   v
-    +-----------------------------+
-    | resolver.py  handle(query)  |
-    |  1. in our zone? else       |
-    |     REFUSED                 |
-    |  2. names.parse_qname()     |
-    |  3. store.get() else        |
-    |     NXDOMAIN                |
-    |  4. txt.make_txt_rrset()    |
-    |     (split <=255 B, UTF-8)  |
-    +--------------+--------------+
-                   v
-          to_wire(max_size=512)
-           |                |
-      fits (UDP/TCP)    too big (UDP only)
-           |                |
-         reply         TC=1, no answer
-                            |
-                  client retries on TCP
-                  -> full answer
+Responses: NOERROR + TXT (found) · NXDOMAIN + SOA (no such verse/lang) ·
+NOERROR/empty + SOA (non-TXT type) · REFUSED (outside our zone) ·
+TC + empty (UDP answer too big — retry over TCP).
 
 ## Layout
 
-    qdns/config.py    constants (zone, langs, limits)
+    qdns/config.py    zone, languages, TTLs, EDNS/SOA constants
     qdns/names.py     DNS name -> ParsedQuery
-    qdns/store.py     data/quran.json loader
-    qdns/txt.py       UTF-8-safe 255-byte chunking, TXT rrset
-    qdns/resolver.py  Message -> Message (no sockets)
-    qdns/server.py    asyncio UDP + TCP transports
-    qdns/client.py    CLI (UDP with TCP fallback)
-    scripts/fetch_data.py   build the dataset
-    tests/            unit + live-server tests
+    qdns/store.py     data/quran.json loader (6,236 verses x 3 langs)
+    qdns/txt.py       UTF-8-safe 255-byte chunking, TXT rrsets
+    qdns/resolver.py  Message -> Message (no sockets): verses, apex, DNSSEC
+    qdns/server.py    asyncio UDP + TCP transports, rate limiting
+    qdns/dnssec.py    Ed25519 signer, apex pre-signing
+    qdns/doh.py       DoH endpoint + reader page + search + SMS webhook
+    qdns/sms.py       SMS parsing, replies, gateway client, inbox poller
+    qdns/client.py    CLI DNS client (UDP with TCP fallback)
+    qdns/web.html     reader page (served by doh.py)
+    scripts/verse     terminal reader CLI
+    scripts/fetch_data.py   rebuild data/quran.json from quran-api
+    scripts/keygen.py       generate DNSSEC keys
+    scripts/bench.py        latency/throughput benchmark
+    scripts/publish_desec.py  publish zone to deSEC (needs DESEC_TOKEN)
+    tests/            unit + live-server tests (94)
 
-## Suggested 3-week path
+## Data + translation licences
 
-1. Week 1 — Read names/txt/resolver; run tests; inspect packets with Wireshark
-   (`udp.port == 5353 || tcp.port == 5353`). Add a language or a `S.count` name.
-2. Week 2 — Server: study UDP truncation + TCP framing; break it on purpose
-   (shrink UDP_LIMIT, send garbage) and watch the log.
-3. Week 3 — Phase 2 items below; write up measurements.
+`data/quran.json` bundles: Uthmani (Hafs) Arabic, Mustafa Khattab
+(The Clear Quran) English, and Maududi Urdu, via fawazahmed0/quran-api;
+rebuild with `python scripts/fetch_data.py`. Check each translation's
+licence before redistributing, and have texts reviewed by a qualified
+person before any public release.
 
-## Phase 2 ideas (not implemented yet)
+## Known limits
 
-- EDNS0: honour client payload size (see TODO in resolver.py), compare with 512
-- SOA/NS records at the apex + SOA in NXDOMAIN answers (negative caching)
-- DNSSEC signing so verses are verifiably unaltered
-- DNS-over-HTTPS front end reusing `Resolver.handle`
-- Benchmark script (latency/throughput vs an HTTP API), rate limiting
-- Real delegation: register a domain, point NS at a public server
+Prototype: single zone, in-memory data, unsigned verses, local-only
+defaults. Do not expose UDP to the open internet as-is (DNS can be abused
+for amplification); the reader page is safe to share via a tunnel.
 
-## Known limits of this prototype
+## License
 
-- Single zone, in-memory data, no rate limiting, no DNSSEC, no EDNS0.
-- Do not expose to the open internet as-is (DNS can be abused for amplification).
-- Data: fawazahmed0/quran-api editions (Uthmani Hafs; Mustafa Khattab,
-  The Clear Quran; Maududi). Check each translation's licence before redistributing, and
-  have texts reviewed by a qualified person before any public release.
+MIT — see [LICENSE](LICENSE).

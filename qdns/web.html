@@ -13,10 +13,8 @@ try {
 } catch (e) { document.documentElement.dataset.theme = "dark"; }
 </script>
 <style>
-  /* Self-hosted Scheherazade New (SIL, OFL): the default Arabic face.
-     Unlike most fonts it keeps kasra below the baseline even combined
-     with shadda (elsewhere kasra drifts up and reads as fatha). Full
-     Quranic-mark coverage verified locally. Served at /font/scheherazade.
+  /* Self-hosted Scheherazade New (SIL, OFL): fallback Arabic face with
+     full Quranic-mark coverage. Served at /font/scheherazade.
      Naskh stays as fallback + phone backup at /font/naskh. */
   @font-face {
     font-family: "Scheherazade Web";
@@ -26,6 +24,15 @@ try {
   @font-face {
     font-family: "Noto Naskh Arabic";
     src: url("/font/naskh") format("truetype");
+    font-display: swap;
+  }
+  /* Amiri first: raster-verified to keep kasra BELOW the letter under
+     shadda (Naskh/Scheherazade draw it above, reading as fatha). Full
+     Arabic-corpus coverage verified; Urdu-only letters fall through to
+     Naskh per character. Served at /font/amiri. */
+  @font-face {
+    font-family: "Amiri Web";
+    src: url("/font/amiri") format("truetype");
     font-display: swap;
   }
   @font-face {
@@ -214,8 +221,8 @@ try {
     color: var(--soft-ink);
   }
   .arabic {
-    font-family: "Scheherazade Web", "Noto Naskh Arabic", "Noto Kufi Arabic", "Amiri Quran",
-                 "Scheherazade New", "Traditional Arabic", serif;
+    font-family: "Amiri Web", "Amiri Quran", "Scheherazade Web", "Noto Naskh Arabic",
+                 "Noto Kufi Arabic", "Scheherazade New", "Traditional Arabic", serif;
     font-size: calc(var(--ar, 1) * 2.1rem);
     line-height: 2;
     text-align: center;
@@ -224,7 +231,7 @@ try {
     text-rendering: optimizeLegibility;
   }
   body.nastaliq .arabic {
-    font-family: "Nastaliq Web", "Scheherazade Web", "Noto Naskh Arabic", serif;
+    font-family: "Nastaliq Web", "Amiri Web", "Amiri Quran", "Scheherazade Web", "Noto Naskh Arabic", serif;
     /* Nastaliq glyphs rise high and hang deep: generous fluid box so
        tall line never clips into ref line above or translation below. */
     font-size: calc(var(--ar, 1) * clamp(1.15rem, 0.9rem + 2.8vw, 1.7rem));
@@ -248,7 +255,7 @@ try {
     margin: 0 auto;
   }
   .translation:lang(ur) {
-    font-family: "Scheherazade Web", "Noto Naskh Arabic", "Noto Kufi Arabic", serif;
+    font-family: "Amiri Web", "Amiri Quran", "Scheherazade Web", "Noto Naskh Arabic", "Noto Kufi Arabic", serif;
     line-height: 2;
   }
   .verse-fade { transition: opacity .25s ease; }

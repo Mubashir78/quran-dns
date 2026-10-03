@@ -171,6 +171,7 @@ class DohTest(unittest.TestCase):
         self.assertIn("--card", body)
         # Shadda+Kasra-safe default face (kasra stays below baseline).
         self.assertIn("/font/scheherazade", body)
+        self.assertIn("/font/amiri", body)
 
 
 if __name__ == "__main__":

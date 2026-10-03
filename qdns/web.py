@@ -15,6 +15,7 @@ _FONTS = {
     "naskh": "Noto Naskh Arabic",
     "nastaliq": "Noto Nastaliq Urdu",
     "scheherazade": "Scheherazade New",
+    "amiri": "Amiri Quran",
 }
 _FONT_CACHE: dict = {}
 

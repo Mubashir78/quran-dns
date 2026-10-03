@@ -203,6 +203,12 @@ try {
   }
   .themebtn:hover { border-width: 2px; padding: calc(.5em - 1px) calc(1em - 1px); }
   .themebtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  /* Phone: dock bottom-right (thumb zone) so the pill never covers
+     the centered subtitle; desktop keeps top-right. */
+  @media (max-width: 36em) {
+    .themebtn { top: auto; bottom: 1em; right: .8em; padding: .45em .7em; }
+    .themebtn:hover { padding: calc(.45em - 1px) calc(.7em - 1px); }
+  }
   header { text-align: center; margin-bottom: 1.25em; }
   header h1 {
     font-family: Georgia, "Times New Roman", serif;

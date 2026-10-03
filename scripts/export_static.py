@@ -75,12 +75,6 @@ SEARCH_JS = """function runSearch(term) {
   }).catch(function () { box.textContent = "Search unavailable."; });
 }"""
 
-VERIFY_JS = """function checkSignature(s, a, lang) {
-  document.getElementById("verify").textContent =
-    "Static copy: verses are baked in, so there is no live signature to check.";
-}"""
-
-
 def _replace_once(text: str, old: str, new: str) -> str:
     n = text.count(old)
     assert n == 1, f"expected 1 occurrence, found {n}: {old[:60]!r}"
@@ -109,8 +103,6 @@ def build(out: Path) -> None:
     html = html.replace("{HERE}", ASK_JS, 1)
     _, html = _block(html, "function runSearch(term) {")
     html = html.replace("{HERE}", SEARCH_JS, 1)
-    _, html = _block(html, "function checkSignature(s, a, lang) {")
-    html = html.replace("{HERE}", VERIFY_JS, 1)
     assert '"search?q="' not in html, "search endpoint still referenced"
     assert "dns-query?dns=" not in html, "DoH endpoint still referenced"
     assert "verify?ref=" not in html, "verify endpoint still referenced"

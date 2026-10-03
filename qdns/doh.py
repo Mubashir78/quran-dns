@@ -140,21 +140,6 @@ class DohHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         self._dispatch("POST")
 
-    def do_PUT(self) -> None:
-        self._dispatch("PUT")
-
-    def do_DELETE(self) -> None:
-        self._dispatch("DELETE")
-
-    def do_HEAD(self) -> None:
-        self._dispatch("HEAD")
-
-    def do_OPTIONS(self) -> None:
-        self._dispatch("OPTIONS")
-
-    def do_PATCH(self) -> None:
-        self._dispatch("PATCH")
-
     def __getattr__(self, name):
         # Any other verb -> same 404/405 mapping, not the default 501.
         if name.startswith("do_"):

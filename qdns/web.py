@@ -6,7 +6,14 @@ resolver/doh; SMS stays in sms.
 from __future__ import annotations
 
 import json
+import re
+import subprocess
 from pathlib import Path
+
+import dns.dnssec
+import dns.flags
+import dns.message
+import dns.rdatatype
 
 from .http import Router, send_bytes, send_text
 
@@ -31,8 +38,6 @@ def serve_page(h, server, parsed, qs) -> None:
 
 
 def serve_font(h, server, parsed, qs) -> None:
-    # Self-hosted fonts: phones often lack Quranic-mark
-    # glyphs (U+06E1/06E2/06E5). Resolved once per process.
     which = parsed.path.rsplit("/", 1)[-1]
     pattern = _FONTS.get(which)
     if pattern is None:
@@ -40,7 +45,6 @@ def serve_font(h, server, parsed, qs) -> None:
         return
     data = _FONT_CACHE.get(which)
     if data is None:
-        import subprocess
         try:
             out = subprocess.run(
                 ["fc-match", pattern, "--format=%{file}"],
@@ -71,12 +75,6 @@ def serve_search(h, server, parsed, qs) -> None:
 
 def serve_verify(h, server, parsed, qs) -> None:
     """Server-side DNSSEC check of one verse answer. JSON out."""
-    import re
-
-    import dns.dnssec
-    import dns.flags
-    import dns.message
-    import dns.rdatatype
     ref = (qs.get("ref") or [""])[0].strip()
     lang = (qs.get("lang") or ["en"])[0].strip()
     m = re.fullmatch(r"(\d{1,3})[:\-](\d{1,3})", ref)

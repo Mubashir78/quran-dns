@@ -30,7 +30,7 @@ Built with Python 3.10+, `dnspython`, `asyncio`, and stdlib-only HTTP for DoH.
 ## Quick start
 
     pip install -r requirements.txt
-    python -m unittest                        # 94 tests
+    python -m unittest                        # 97 tests
     python -m qdns.server --port 5453         # DNS (UDP+TCP); --doh-port 8053 adds DoH
 
 Port 53 needs root; 5353 is the code default. On machines running
@@ -104,8 +104,7 @@ TC + empty (UDP answer too big — retry over TCP).
     scripts/fetch_data.py   rebuild data/quran.json from quran-api
     scripts/keygen.py       generate DNSSEC keys
     scripts/bench.py        latency/throughput benchmark
-    scripts/publish_desec.py  publish zone to deSEC (needs DESEC_TOKEN)
-    tests/            unit + live-server tests (94)
+    tests/            unit + live-server tests (97)
 
 ## Data + translation licences
 

@@ -15,12 +15,12 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-import sys as _sys
 
-_sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT))
 
 ASK_JS = """var QURAN = null;
 function quranData() {
@@ -74,12 +74,6 @@ SEARCH_JS = """function runSearch(term) {
     applyMemorize();
   }).catch(function () { box.textContent = "Search unavailable."; });
 }"""
-
-def _replace_once(text: str, old: str, new: str) -> str:
-    n = text.count(old)
-    assert n == 1, f"expected 1 occurrence, found {n}: {old[:60]!r}"
-    return text.replace(old, new)
-
 
 def _block(text: str, start: str) -> tuple[str, str]:
     """Split out one `function ... { ... }` block (brace-matched)."""

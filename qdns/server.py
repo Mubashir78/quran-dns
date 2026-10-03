@@ -33,8 +33,11 @@ class RateLimiter:
     Defaults (100 qps, burst 200) are generous so the local demo is
     unaffected; the limiter only sheds abusive load. ``clock`` is
     injectable (defaults to :func:`time.monotonic`) so tests can drive
-    refill deterministically.
+    refill deterministically. Buckets are capped (oldest shed first) so a
+    long-running server cannot grow memory on distinct spoofed IPs.
     """
+
+    MAX_BUCKETS = 8192
 
     def __init__(self, rate: float = 100.0, burst: float = 200.0,
                  clock=time.monotonic):
@@ -47,6 +50,9 @@ class RateLimiter:
         now = self._clock()
         bucket = self._buckets.get(ip)
         if bucket is None:
+            if len(self._buckets) >= self.MAX_BUCKETS:
+                for old in list(self._buckets)[:self.MAX_BUCKETS // 2]:
+                    del self._buckets[old]
             tokens, last = self.burst, now
         else:
             tokens, last = bucket

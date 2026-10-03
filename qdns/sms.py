@@ -1,12 +1,15 @@
 """Step 6: SMS gateway (option B). Android relay app forwards texts here,
-we answer through the phone's send API. Pure logic; HTTP lives in doh.py."""
+we answer through the phone's send API."""
 from __future__ import annotations
 
+import base64
+import json
 import re
 import time
 import urllib.request
-import json
+from urllib.parse import urlencode
 
+from .http import send_text
 from .store import VerseStore
 
 LANGS_SMS = ("ar", "en", "ur")
@@ -85,7 +88,6 @@ class PhoneGateway:
         self.smsgate = smsgate
 
     def send(self, to: str, text: str, timeout: float = 10.0) -> None:
-        import base64
         if self.smsgate:
             body = json.dumps({"textMessage": {"text": text},
                                "phoneNumbers": [to]}).encode("utf-8")
@@ -106,8 +108,6 @@ class PhoneGateway:
 def fetch_inbox(base_url: str, username: str, password: str,
                 limit: int = 20, timeout: float = 10.0) -> list[dict]:
     """GET SMSGate local /inbox. Returns list of message dicts."""
-    import base64
-    from urllib.parse import urlencode
     url = base_url.rstrip("/") + "/inbox?" + urlencode({"type": "SMS", "limit": limit})
     req = urllib.request.Request(url)
     cred = base64.b64encode(f"{username}:{password}".encode()).decode()
@@ -164,10 +164,9 @@ class InboxPoller:
 
 
 def poll_forever(poller: InboxPoller, interval: float = 10.0) -> None:
-    import time as _time
     while True:
         poller.poll_once()
-        _time.sleep(interval)
+        time.sleep(interval)
 
 
 def handle_incoming(payload: dict, store: VerseStore, token_expected: str,
@@ -211,15 +210,13 @@ def make_gateway(send_url: str, token: str = "",
 
 def handle_sms_post(h, server, parsed, qs) -> None:
     """POST /sms/incoming: relay-app webhook -> verse reply via gateway."""
-    import json as _json
-    from .http import send_text
     ctype = h.headers.get("Content-Type", "").split(";")[0].strip().lower()
     if ctype != SMS_MIME:
         send_text(h, 415, "unsupported media type")
         return
     try:
         n = int(h.headers.get("Content-Length") or 0)
-        payload = _json.loads(h.rfile.read(n) if n > 0 else b"")
+        payload = json.loads(h.rfile.read(n) if n > 0 else b"")
     except Exception:
         send_text(h, 400, "bad json body")
         return

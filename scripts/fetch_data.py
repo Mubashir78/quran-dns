@@ -21,10 +21,10 @@ EDITIONS = {
 }
 OUT = Path(__file__).resolve().parent.parent / "data" / "quran.json"
 
-# The source dataset writes the accusative alif detached ("مَرَضࣰ ا" instead
-# of "مَرَضًا"). A lone alif is never a word on its own, so rejoin it with
-# the tanwin word it belongs to. Only fathatan takes this alif; other
-# tanwin+space pairs are genuine word boundaries and stay untouched.
+# The source writes the accusative alif detached ("مَرَضࣰ ا" for "مَرَضًا").
+# A lone alif is never a word, so rejoin it with its tanwin word. Only
+# fathatan takes this alif; other tanwin+space pairs are genuine
+# boundaries and stay untouched.
 _DETACHED_ALIF = re.compile(
     r"([\u064b\u08f0]) ([\u0627\u0649]"
     r"[\u064e-\u0652\u0670\u06d6-\u06ed\u08e4-\u08fe]*"
@@ -32,24 +32,16 @@ _DETACHED_ALIF = re.compile(
 )
 
 
-# Upstream writes Uthmani open tanwins (U+08F0-08F2). They render
-# inconsistency: open kasratan is easily misread), while the
-# reference text (quran.com) uses the closed forms everywhere. Likewise the
-# corpus writes sukun as U+06E1 (dotless head of khah, the Tanzil/Medina
-# encoding); most fonts draw it as a fatha-like tick, so normalize to the
-# plain sukun U+0652 the reference uses.
+# Upstream writes open tanwins (U+08F0-08F2, easily misread) and sukun as
+# U+06E1 (renders as a fatha-like tick in most fonts); quran.com uses the
+# closed forms + plain U+0652, so normalize to those.
 _OPEN_TANWIN = str.maketrans({0x08F0: 0x064B, 0x08F1: 0x064C, 0x08F2: 0x064D,
                               0x06E1: 0x0652})
 
 
 def normalize_text(text: str) -> str:
-    # NFC first: the corpus stores some mark runs in non-canonical order
-    # (e.g. dal+kasra+shadda instead of dal+shadda+kasra). Shapers match
-    # their mark-positioning lookups against canonical order, so the
-    # misplaced kasra lands above the letter and reads as a fatha
-    # (HarfBuzz list 2011, UTR #53 AMTRA). Translate before NFC: the
-    # sukun mapping itself changes combining class (06E1=230 -> 0652=34),
-    # so normalizing last keeps the whole run canonical.
+    # NFC last: the 06E1->0652 mapping changes combining class
+    # (230 -> 34), so the whole mark run must be reordered after it.
     return unicodedata.normalize(
         "NFC", _DETACHED_ALIF.sub(r"\1\2", text).translate(_OPEN_TANWIN))
 

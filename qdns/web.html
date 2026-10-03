@@ -126,14 +126,21 @@ try {
       max-width: none;
     }
     .passage > .ref-text { grid-column: 1 / -1; margin: 0 0 .25em; }
-    /* Faint inner frames, equal padding both columns. */
-    #verseblock > .arabic, .passage > .arabic,
-    #verseblock > .translation, .passage > .translation {
-      border: 1px solid rgba(168, 126, 31, .35);
-      border-radius: .45em;
-      background: var(--frame-bg);
-      padding: 1em 1.1em;
-    }
+  }
+  /* Faint inner frames around each text at every width: same equal
+     padding on phone and desktop, readability without heaviness. */
+  #verseblock > .arabic, .passage > .arabic,
+  #verseblock > .translation, .passage > .translation {
+    border: 1px solid rgba(168, 126, 31, .35);
+    border-radius: .45em;
+    background: var(--frame-bg);
+    padding: 1em 1.1em;
+  }
+  html[data-theme="dark"] #verseblock > .arabic,
+  html[data-theme="dark"] .passage > .arabic,
+  html[data-theme="dark"] #verseblock > .translation,
+  html[data-theme="dark"] .passage > .translation {
+    border-color: rgba(210, 169, 79, .30);
   }
   body::before {
     content: "";

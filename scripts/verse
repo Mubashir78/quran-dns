@@ -130,20 +130,37 @@ def run(ref: str, langs, args, color: bool) -> int:
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    pairs = [(s, a, la) for s, a in verses for la in langs]
+    results: dict[tuple[int, int, str], str] = {}
+    errors: dict[tuple[int, int, str], tuple[str, int]] = {}
+    import concurrent.futures as _fut
+
+    def _one(pair):
+        s, a, la = pair
+        try:
+            return pair, (True, get_verse(s, a, la, args.server, args.port, args.doh))
+        except LookupError as exc:
+            return pair, (False, (f"error: {exc}", 1))
+        except Exception as exc:
+            return pair, (False, (f"error: could not reach {args.server}:{args.port} ({exc})", 2))
+
+    # Network-bound: fetch all (verse, lang) pairs at once, print in order.
+    with _fut.ThreadPoolExecutor(max_workers=min(len(pairs), 32)) as ex:
+        for pair, outcome in ex.map(_one, pairs):
+            if outcome[0]:
+                results[pair] = outcome[1]
+            else:
+                errors[pair] = outcome[1]
     if args.json:
         out = []
     for s, a in verses:
         texts = {}
         for la in langs:
-            try:
-                texts[la] = get_verse(s, a, la, args.server, args.port, args.doh)
-            except LookupError as exc:
-                print(f"error: {exc}", file=sys.stderr)
-                return 1
-            except Exception as exc:
-                print(f"error: could not reach {args.server}:{args.port} ({exc})",
-                      file=sys.stderr)
-                return 2
+            if (s, a, la) in errors:
+                msg, code = errors[(s, a, la)]
+                print(msg, file=sys.stderr)
+                return code
+            texts[la] = results[(s, a, la)]
         if args.json:
             out.append({"ref": f"{s}:{a}", **texts})
         else:

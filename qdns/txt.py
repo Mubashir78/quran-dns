@@ -6,6 +6,8 @@ boundaries - cutting a multi-byte character in half would corrupt the text.
 """
 from __future__ import annotations
 
+import functools
+
 import dns.name
 import dns.rdataclass
 import dns.rdatatype
@@ -18,7 +20,10 @@ IN = dns.rdataclass.IN
 TXT = dns.rdatatype.TXT
 
 
+@functools.lru_cache(maxsize=None)
 def chunk_utf8(text: str, limit: int = TXT_CHUNK) -> list[bytes]:
+    """Split on char boundaries. Pure function: cached, so repeat queries
+    for the same verse skip re-chunking (identical bytes out)."""
     assert 1 <= limit <= 255, "TXT chunk limit must be 1..255"
     raw = text.encode("utf-8")
     chunks: list[bytes] = []

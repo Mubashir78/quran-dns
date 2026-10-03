@@ -32,9 +32,13 @@ _DETACHED_ALIF = re.compile(
 
 
 # Upstream writes Uthmani open tanwins (U+08F0-08F2). They render
-# inconsistently across fonts (open kasratan is easily misread), while the
-# reference text (quran.com) uses the closed forms everywhere. Normalize.
-_OPEN_TANWIN = str.maketrans({0x08F0: 0x064B, 0x08F1: 0x064C, 0x08F2: 0x064D})
+# inconsistency: open kasratan is easily misread), while the
+# reference text (quran.com) uses the closed forms everywhere. Likewise the
+# corpus writes sukun as U+06E1 (dotless head of khah, the Tanzil/Medina
+# encoding); most fonts draw it as a fatha-like tick, so normalize to the
+# plain sukun U+0652 the reference uses.
+_OPEN_TANWIN = str.maketrans({0x08F0: 0x064B, 0x08F1: 0x064C, 0x08F2: 0x064D,
+                              0x06E1: 0x0652})
 
 
 def normalize_text(text: str) -> str:

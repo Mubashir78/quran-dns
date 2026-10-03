@@ -9,6 +9,7 @@ editions.json). Check each translation's licence before redistributing.
 """
 import json
 import re
+import unicodedata
 import urllib.request
 from pathlib import Path
 
@@ -42,7 +43,15 @@ _OPEN_TANWIN = str.maketrans({0x08F0: 0x064B, 0x08F1: 0x064C, 0x08F2: 0x064D,
 
 
 def normalize_text(text: str) -> str:
-    return _DETACHED_ALIF.sub(r"\1\2", text).translate(_OPEN_TANWIN)
+    # NFC first: the corpus stores some mark runs in non-canonical order
+    # (e.g. dal+kasra+shadda instead of dal+shadda+kasra). Shapers match
+    # their mark-positioning lookups against canonical order, so the
+    # misplaced kasra lands above the letter and reads as a fatha
+    # (HarfBuzz list 2011, UTR #53 AMTRA). Translate before NFC: the
+    # sukun mapping itself changes combining class (06E1=230 -> 0652=34),
+    # so normalizing last keeps the whole run canonical.
+    return unicodedata.normalize(
+        "NFC", _DETACHED_ALIF.sub(r"\1\2", text).translate(_OPEN_TANWIN))
 
 
 def download(edition: str) -> list[dict]:

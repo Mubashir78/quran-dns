@@ -169,6 +169,8 @@ class DohTest(unittest.TestCase):
         self.assertIn('id="theme"', body)
         self.assertIn("qr-theme", body)
         self.assertIn("--card", body)
+        # Shadda+Kasra-safe default face (kasra stays below baseline).
+        self.assertIn("/font/scheherazade", body)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from .http import Router, send_bytes, send_text
 _FONTS = {
     "naskh": "Noto Naskh Arabic",
     "nastaliq": "Noto Nastaliq Urdu",
+    "scheherazade": "Scheherazade New",
 }
 _FONT_CACHE: dict = {}
 

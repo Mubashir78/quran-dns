@@ -13,8 +13,16 @@ try {
 } catch (e) { document.documentElement.dataset.theme = "dark"; }
 </script>
 <style>
-  /* Self-hosted Noto Naskh Arabic: covers Quranic marks U+06E1/06E2/06E5
-     that phone system fonts often lack (boxes). Served at /font/naskh. */
+  /* Self-hosted Scheherazade New (SIL, OFL): the default Arabic face.
+     Unlike most fonts it keeps kasra below the baseline even combined
+     with shadda (elsewhere kasra drifts up and reads as fatha). Full
+     Quranic-mark coverage verified locally. Served at /font/scheherazade.
+     Naskh stays as fallback + phone backup at /font/naskh. */
+  @font-face {
+    font-family: "Scheherazade Web";
+    src: url("/font/scheherazade") format("truetype");
+    font-display: swap;
+  }
   @font-face {
     font-family: "Noto Naskh Arabic";
     src: url("/font/naskh") format("truetype");
@@ -206,7 +214,7 @@ try {
     color: var(--soft-ink);
   }
   .arabic {
-    font-family: "Noto Naskh Arabic", "Noto Kufi Arabic", "Amiri Quran",
+    font-family: "Scheherazade Web", "Noto Naskh Arabic", "Noto Kufi Arabic", "Amiri Quran",
                  "Scheherazade New", "Traditional Arabic", serif;
     font-size: calc(var(--ar, 1) * 2.1rem);
     line-height: 2;
@@ -216,7 +224,7 @@ try {
     text-rendering: optimizeLegibility;
   }
   body.nastaliq .arabic {
-    font-family: "Nastaliq Web", "Noto Naskh Arabic", serif;
+    font-family: "Nastaliq Web", "Scheherazade Web", "Noto Naskh Arabic", serif;
     /* Nastaliq glyphs rise high and hang deep: generous fluid box so
        tall line never clips into ref line above or translation below. */
     font-size: calc(var(--ar, 1) * clamp(1.15rem, 0.9rem + 2.8vw, 1.7rem));
@@ -240,7 +248,7 @@ try {
     margin: 0 auto;
   }
   .translation:lang(ur) {
-    font-family: "Noto Naskh Arabic", "Noto Kufi Arabic", serif;
+    font-family: "Scheherazade Web", "Noto Naskh Arabic", "Noto Kufi Arabic", serif;
     line-height: 2;
   }
   .verse-fade { transition: opacity .25s ease; }

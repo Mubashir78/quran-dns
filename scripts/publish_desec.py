@@ -51,7 +51,7 @@ def main(argv=None) -> int:
         return 2
 
     store = VerseStore.from_file(args.data)
-    refs = sorted(store._verses, key=lambda r: tuple(map(int, r.split(":"))))
+    refs = store.refs()
     if args.limit:
         refs = refs[:args.limit]
 

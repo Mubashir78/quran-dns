@@ -194,40 +194,34 @@ async def serve(host: str, port: int, data_path, zone: str, doh_port: int | None
               sms_smsgate: bool = False, sms_base_url: str = "",
               sms_poll: float = 10.0):
     store = VerseStore.from_file(data_path)
-    try:
-        from .dnssec import load_signer
-        signer = load_signer()
+    from .resolver import build_resolver
+    resolver = build_resolver(store, zone)
+    if resolver.dnssec is not None:
         log.info("DNSSEC island active (apex SOA/NS/DNSKEY signed, Ed25519)")
-    except Exception as exc:
-        signer = None
-        log.warning("DNSSEC off (no keys: %s); run scripts/keygen.py", exc)
-    resolver = Resolver(store, zone=zone, dnssec=signer)
-    if signer is not None:
-        from .dnssec import VerseSigner, verse_chain
-        vsigner = VerseSigner(signer.zsk_private, signer.zsk_dnskey, zone=zone)
-        vsigner.set_chain(verse_chain(store, zone))
-        resolver.verse_signer = vsigner
+    else:
+        log.warning("DNSSEC off (no keys); run scripts/keygen.py")
+    if resolver.verse_signer is not None:
         log.info("verse signing + NSEC khatmah chain active (%d names)",
-                 len(vsigner._next))
+                 len(resolver.verse_signer._next))
     udp, tcp = await start_servers(resolver, host, port)
     log.info("serving %d verses for zone %s on %s:%d (udp+tcp)",
              len(store), zone, host, port)
     httpd = None
     if doh_port is not None:
         from .doh import make_server
-        from .sms import PhoneGateway
+        from .sms import make_gateway
         import threading
-        gateway = PhoneGateway(sms_send_url, sms_token, sms_username,
-                                 sms_password, sms_smsgate) if sms_send_url else None
+        gateway = make_gateway(sms_send_url, sms_token,
+                               sms_username, sms_password, sms_smsgate)
         httpd = make_server(resolver, host, doh_port, store=store,
                             gateway=gateway, sms_token=sms_token)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         log.info("serving DoH for zone %s on %s:%d (/dns-query)",
                  zone, host, httpd.server_address[1])
     if sms_base_url:
-        from .sms import Cooldown, InboxPoller, poll_forever
+        from .sms import Cooldown, InboxPoller, make_gateway, poll_forever
         import threading
-        gateway = PhoneGateway(sms_base_url.rstrip("/") + "/message",
+        gateway = make_gateway(sms_base_url.rstrip("/") + "/message",
                                sms_token, sms_username, sms_password, sms_smsgate)
         poller = InboxPoller(sms_base_url, sms_username, sms_password,
                              store, gateway, Cooldown())

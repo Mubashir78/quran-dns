@@ -58,6 +58,7 @@ class Resolver:
                 if sig is not None:
                     resp.answer.append(sig)
 
+    # -- DNSSEC ------------------------------------------------------
     def _soa_rrset(self):
         return dns.rrset.from_text(
             self.zone.to_text(), NEG_TTL, "IN", "SOA",
@@ -155,3 +156,23 @@ class Resolver:
         if p.kind == "help":
             return HELP_TEXT
         return self.store.get(p.surah, p.ayah, p.lang)
+
+
+def build_resolver(store: VerseStore, zone: str = ZONE) -> Resolver:
+    """Store + optional DNSSEC island in one place.
+
+    Shared by every serve() entry point so key loading and the verse
+    signature chain are defined once. Unsigned when keys are absent.
+    """
+    try:
+        from .dnssec import load_signer
+        signer = load_signer()
+    except Exception:
+        signer = None
+    resolver = Resolver(store, zone=zone, dnssec=signer)
+    if signer is not None:
+        from .dnssec import VerseSigner, verse_chain
+        vsigner = VerseSigner(signer.zsk_private, signer.zsk_dnskey, zone=zone)
+        vsigner.set_chain(verse_chain(store, zone))
+        resolver.verse_signer = vsigner
+    return resolver

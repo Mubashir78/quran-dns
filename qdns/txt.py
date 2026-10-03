@@ -20,16 +20,21 @@ TXT = dns.rdatatype.TXT
 
 def chunk_utf8(text: str, limit: int = TXT_CHUNK) -> list[bytes]:
     assert 1 <= limit <= 255, "TXT chunk limit must be 1..255"
+    raw = text.encode("utf-8")
     chunks: list[bytes] = []
-    buf = bytearray()
-    for ch in text:
-        b = ch.encode("utf-8")
-        if len(buf) + len(b) > limit:
-            chunks.append(bytes(buf))
-            buf = bytearray()
-        buf += b
-    if buf or not chunks:
-        chunks.append(bytes(buf))
+    start = 0
+    while start < len(raw):
+        end = min(start + limit, len(raw))
+        # Back off to a char boundary: a cut is bad iff the byte after it
+        # is a UTF-8 continuation byte (char started before the cut).
+        while end > start and end < len(raw) and raw[end] & 0xC0 == 0x80:
+            end -= 1
+        if end == start:  # limit smaller than one char; can't happen (limit>=1)
+            end = start + 1
+        chunks.append(raw[start:end])
+        start = end
+    if not chunks:
+        chunks.append(b"")
     return chunks
 
 

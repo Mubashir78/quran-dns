@@ -194,3 +194,60 @@ def handle_incoming(payload: dict, store: VerseStore, token_expected: str,
     except SmsParseError as exc:
         return sender, str(exc)
     return sender, build_reply(store, s, a, lang)
+
+
+SMS_PATH = "/sms/incoming"
+SMS_MIME = "application/json"
+
+
+def make_gateway(send_url: str, token: str = "",
+                 username: str = "", password: str = "",
+                 smsgate: bool = False) -> PhoneGateway | None:
+    """Gateway factory. None when no send URL (SMS stays off)."""
+    if not send_url:
+        return None
+    return PhoneGateway(send_url, token, username, password, smsgate)
+
+
+def handle_sms_post(h, server, parsed, qs) -> None:
+    """POST /sms/incoming: relay-app webhook -> verse reply via gateway."""
+    import json as _json
+    from .http import send_text
+    ctype = h.headers.get("Content-Type", "").split(";")[0].strip().lower()
+    if ctype != SMS_MIME:
+        send_text(h, 415, "unsupported media type")
+        return
+    try:
+        n = int(h.headers.get("Content-Length") or 0)
+        payload = _json.loads(h.rfile.read(n) if n > 0 else b"")
+    except Exception:
+        send_text(h, 400, "bad json body")
+        return
+    if server.store is None or server.sms_gateway is None:
+        send_text(h, 503, "sms gateway not configured")
+        return
+    try:
+        result = handle_incoming(payload, server.store,
+                                 server.sms_token, server.sms_cooldown)
+    except PermissionError:
+        send_text(h, 403, "bad sms token")
+        return
+    except KeyError:
+        send_text(h, 400, "payload needs from/body fields")
+        return
+    if result is None:
+        send_text(h, 200, "cooldown, reply skipped")
+        return
+    sender, reply = result
+    try:
+        server.sms_gateway.send(sender, reply)
+    except Exception as exc:
+        import logging
+        logging.getLogger("qdns.sms").warning("sms send failed: %s", exc)
+        send_text(h, 502, "relay send failed")
+        return
+    send_text(h, 200, "replied")
+
+
+def register_sms(router) -> None:
+    router.add("POST", SMS_PATH, handle_sms_post)

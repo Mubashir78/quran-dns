@@ -94,7 +94,9 @@ TC + empty (UDP answer too big — retry over TCP).
     qdns/resolver.py  Message -> Message (no sockets): verses, apex, DNSSEC
     qdns/server.py    asyncio UDP + TCP transports, rate limiting
     qdns/dnssec.py    Ed25519 signer, apex pre-signing
-    qdns/doh.py       DoH endpoint + reader page + search + SMS webhook
+    qdns/doh.py       DoH endpoint only (RFC 8484 GET/POST)
+    qdns/http.py      tiny HTTP plumbing: router + response helpers
+    qdns/web.py       reader page, search, verify, fonts
     qdns/sms.py       SMS parsing, replies, gateway client, inbox poller
     qdns/client.py    CLI DNS client (UDP with TCP fallback)
     qdns/web.html     reader page (served by doh.py)

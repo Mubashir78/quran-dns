@@ -25,5 +25,31 @@ class VerseStore:
     def get(self, surah: int, ayah: int, lang: str) -> str | None:
         return self._verses.get(f"{surah}:{ayah}", {}).get(lang)
 
+    @property
+    def _ordered_refs(self) -> list[str]:
+        """Canonical order, computed once (search + range walk reuse it)."""
+        try:
+            return self.__ordered
+        except AttributeError:
+            self.__ordered = sorted(
+                self._verses, key=lambda r: tuple(map(int, r.split(":"))))
+            return self.__ordered
+
+    def refs(self) -> list[str]:
+        """All verse refs ('S:A') in canonical order."""
+        return list(self._ordered_refs)
+
+    def search(self, query: str, lang: str, limit: int = 20) -> list[tuple[str, str]]:
+        """(ref, snippet) substring matches in reading order."""
+        qfold = query.casefold()
+        hits = []
+        for ref in self._ordered_refs:
+            text = self._verses[ref].get(lang, "")
+            if qfold in text.casefold():
+                hits.append((ref, text[:120]))
+                if len(hits) >= limit:
+                    break
+        return hits
+
     def __len__(self) -> int:
         return len(self._verses)

@@ -195,10 +195,9 @@ def verse_chain(store, zone: str = ZONE) -> list[dns.name.Name]:
     Last name wraps to first, so the chain is one khatmah loop.
     """
     keys: list[tuple[int, int]] = []
-    for ref in store._verses:
+    for ref in store.refs():
         s, a = ref.split(":")
         keys.append((int(s), int(a)))
-    keys.sort()
     out = []
     for s, a in keys:
         for lang in LANG_ORDER:

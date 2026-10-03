@@ -159,11 +159,11 @@ class DohTest(unittest.TestCase):
         # Keybinds for unblurring must be present and documented.
         self.assertIn("toggleTranslations", body)
         self.assertIn("aria-keyshortcuts", body)
-        self.assertIn("While memorizing", body)
+        self.assertIn("Memorize mode", body)
         # Navigation/action keybinds must be wired with documented hints.
         self.assertIn('aria-keyshortcuts="n"', body)
         self.assertIn('getElementById("q").focus()', body)
-        self.assertIn("Keys:", body)
+        self.assertIn('id="keys"', body)
 
 
 if __name__ == "__main__":

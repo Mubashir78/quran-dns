@@ -354,11 +354,28 @@
   }
   .more summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .more .nav { margin-top: .5em; }
-  .keyhint { font-size: .8rem; color: var(--soft-ink); margin: .75em 0 0; }
-  .keyhint kbd {
+  .keysbtn kbd {
     border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px;
-    background: #FFFDF7; padding: 0 .4em; font-size: .75rem;
+    background: #FFFDF7; padding: 0 .4em; font-size: .8em; font-family: inherit;
   }
+  dialog#keys { border: 1px solid var(--gold); border-radius: 10px; padding: 0;
+    max-width: min(26em, 92vw); background: var(--paper); color: var(--ink); }
+  dialog#keys::backdrop { background: rgb(30 42 36 / .45); }
+  dialog#keys form { padding: 1.25em 1.5em 1.5em; margin: 0; }
+  dialog#keys h2 { font-size: 1rem; margin: 0 0 .5em; font-family: Georgia, serif; }
+  dialog#keys h3 {
+    font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--soft-ink); margin: 1em 0 .25em; font-weight: normal;
+  }
+  dialog#keys .krow {
+    display: flex; justify-content: space-between; align-items: center; gap: 2em;
+    padding: .3em 0; border-top: 1px dotted var(--rule); font-size: .9rem;
+  }
+  dialog#keys .krow kbd {
+    border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px;
+    background: #FFFDF7; padding: 0 .5em; font-size: .8rem; white-space: nowrap;
+  }
+  dialog#keys .kclose { margin-top: 1.25em; width: 100%; }
   /* Breathing room between expanded actions and the search box. */
   #searchform { margin-top: 1.5em; }
   details.saved-wrap { margin-top: 2em; border-top: 1px solid var(--rule); padding-top: 1em; }
@@ -431,9 +448,27 @@
     <button type="button" id="fonttoggle" class="ghost" aria-pressed="false" title="Switch Arabic calligraphy style">Nastaliq style</button>
     <button type="button" id="shrink" class="ghost" aria-label="Smaller Arabic text">A−</button>
     <button type="button" id="grow" class="ghost" aria-label="Larger Arabic text">A+</button>
+    <button type="button" id="keysbtn" class="ghost keysbtn" aria-keyshortcuts="?">Keys <kbd>?</kbd></button>
   </div>
-  <p class="keyhint">Keys: <kbd>N</kbd> next · <kbd>P</kbd> previous · <kbd>S</kbd> surprise · <kbd>/</kbd> search · <kbd>C</kbd> copy · <kbd>L</kbd> language. While memorizing: <kbd>R</kbd> references · <kbd>T</kbd> translation · <kbd>A</kbd> reveal all · <kbd>M</kbd> memorize on/off</p>
 </details>
+<dialog id="keys" aria-labelledby="keystitle">
+  <form method="dialog">
+    <h2 id="keystitle">Keyboard shortcuts</h2>
+    <h3>Reading</h3>
+    <div class="krow"><span>Next verse</span><span><kbd>N</kbd> <kbd>→</kbd></span></div>
+    <div class="krow"><span>Previous verse</span><span><kbd>P</kbd> <kbd>←</kbd></span></div>
+    <div class="krow"><span>Surprise me</span><kbd>S</kbd></div>
+    <div class="krow"><span>Search</span><kbd>/</kbd></div>
+    <div class="krow"><span>Copy verse</span><kbd>C</kbd></div>
+    <div class="krow"><span>Switch language</span><kbd>L</kbd></div>
+    <h3>Memorize mode</h3>
+    <div class="krow"><span>Reveal references</span><kbd>R</kbd></div>
+    <div class="krow"><span>Reveal translation</span><kbd>T</kbd></div>
+    <div class="krow"><span>Reveal all</span><kbd>A</kbd></div>
+    <div class="krow"><span>Memorize on / off</span><kbd>M</kbd></div>
+    <button class="ghost kclose" value="close">Close</button>
+  </form>
+</dialog>
 
 <form class="controls" id="searchform">
   <div class="field">
@@ -820,6 +855,13 @@ document.addEventListener("keydown", function (e) {
   else if (k === "r") toggleRefs();
   else if (k === "t") toggleTranslations();
   else if (k === "a") revealAll();
+  else if (e.key === "?") {
+    e.preventDefault();
+    document.getElementById("keys").showModal();
+  }
+});
+document.getElementById("keysbtn").addEventListener("click", function () {
+  document.getElementById("keys").showModal();
 });
 document.getElementById("reftext").addEventListener("click", function () {
   /* References reveal as a pair; the translation blur stays independent. */

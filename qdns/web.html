@@ -699,10 +699,18 @@ try {
   var saved = localStorage.getItem("qr-lang");
   if (saved === "en" || saved === "ur") langEl.value = saved;
 } catch (e) {}
+var searchBox = document.getElementById("q");
+function syncSearchHint() {
+  /* Placeholder must suggest a word in the active language, else users
+     search English words in Urdu text and get zero hits. */
+  searchBox.placeholder = langEl.value === "ur" ? "رحمت" : "mercy";
+}
 langEl.addEventListener("change", function () {
   try { localStorage.setItem("qr-lang", langEl.value); } catch (e) {}
+  syncSearchHint();
   show(cur.s, cur.a);
 });
+syncSearchHint();
 
 function parseRef(text) {
   var m = text.trim().match(/^(\d{1,3})[:\-](\d{1,3})(?:\s*-\s*(\d{1,3}))?$/);

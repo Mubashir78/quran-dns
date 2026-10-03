@@ -169,6 +169,8 @@ class DohTest(unittest.TestCase):
         self.assertIn('id="theme"', body)
         self.assertIn("qr-theme", body)
         self.assertIn("--card", body)
+        # Search hint follows the active language (Urdu hint for Urdu text).
+        self.assertIn("syncSearchHint", body)
         # Shadda+Kasra-safe default face (kasra stays below baseline).
         self.assertIn("/font/scheherazade", body)
         self.assertIn("/font/amiri", body)

@@ -335,7 +335,12 @@ try {
     .daily { padding: .9em 1em; }
   }
   .field label { font-size: .8rem; color: var(--soft-ink); text-align: left; }
-  .field-error { color: var(--error); font-size: .85rem; min-height: 1.2em; }
+  /* Error reserves two lines up front: long hints wrap instead of
+     shifting (or covering) the ornament below on narrow phones. */
+  .field-error {
+    color: var(--error); font-size: .85rem; line-height: 1.2;
+    min-height: 2.4em; margin: 0 0 .5em; text-align: center;
+  }
   .results { max-width: 34em; margin: 0 auto 1em; }
   .results button {
     display: block; width: 100%; text-align: left;

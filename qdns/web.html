@@ -797,6 +797,15 @@ function applyFont(nastaliq) {
 }
 var nastaliq = false;
 try { nastaliq = localStorage.getItem("qr-font") === "nastaliq"; } catch (e) {}
+/* One-time reset: an early build stored nastaliq as the preference on some
+   phones, hiding the fixed default stack. Version the pref once. */
+try {
+  if (localStorage.getItem("qr-v") !== "1") {
+    localStorage.removeItem("qr-font");
+    localStorage.setItem("qr-v", "1");
+    nastaliq = false;
+  }
+} catch (e) {}
 applyFont(nastaliq);
 fontBtn.addEventListener("click", function () {
   nastaliq = !nastaliq;

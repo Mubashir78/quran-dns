@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+keys/*.pem
+!keys/.gitkeep
+.cache/
+*.log

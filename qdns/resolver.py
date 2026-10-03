@@ -45,6 +45,19 @@ class Resolver:
         # Optional DNSSEC island signer. None (default) = zero behavior change.
         self.dnssec = dnssec
         self.verse_signer = verse_signer
+        # Static sets, built once: identical on every query (spike: profiled
+        # ~44% of handle() in make_txt_rrset/from_text; verses never change).
+        self._soa = dns.rrset.from_text(
+            self.zone.to_text(), NEG_TTL, "IN", "SOA",
+            f"{SOA_MNAME} {SOA_RNAME} {SOA_SERIAL} "
+            f"{SOA_REFRESH} {SOA_RETRY} {SOA_EXPIRE} {NEG_TTL}",
+        )
+        self._ns = [
+            dns.rrset.from_text(self.zone.to_text(), TTL, "IN", "NS", ns)
+            for ns in NS_NAMES
+        ]
+        self._help = make_txt_rrset(self.zone, self.ttl, HELP_TEXT)
+        self._verse_rrsets: dict[str, object] = {}
 
     def _maybe_sign(self, query: dns.message.Message,
                     resp: dns.message.Message) -> None:
@@ -60,19 +73,20 @@ class Resolver:
 
     # -- DNSSEC ------------------------------------------------------
     def _soa_rrset(self):
-        return dns.rrset.from_text(
-            self.zone.to_text(), NEG_TTL, "IN", "SOA",
-            f"{SOA_MNAME} {SOA_RNAME} {SOA_SERIAL} "
-            f"{SOA_REFRESH} {SOA_RETRY} {SOA_EXPIRE} {NEG_TTL}",
-        )
+        return self._soa
 
     def _ns_rrsets(self):
-        out = []
-        for ns in NS_NAMES:
-            out.append(dns.rrset.from_text(
-                self.zone.to_text(), TTL, "IN", "NS", ns,
-            ))
-        return out
+        return self._ns
+
+    def _verse_rrset(self, name, text):
+        """Built TXT RRsets cached by owner name; safe to share: to_wire
+        never mutates the rrset, and per-verse RRSIGs derive from it."""
+        try:
+            return self._verse_rrsets[name.to_text()]
+        except KeyError:
+            rrset = make_txt_rrset(name, self.ttl, text)
+            self._verse_rrsets[name.to_text()] = rrset
+            return rrset
 
     def handle(self, query: dns.message.Message) -> dns.message.Message:
         resp = dns.message.make_response(query, our_payload=SERVER_EDNS_MAX)
@@ -112,7 +126,7 @@ class Resolver:
                 self._maybe_sign(query, resp)
                 return resp
             if q.rdtype in (dns.rdatatype.TXT, dns.rdatatype.ANY):
-                resp.answer.append(make_txt_rrset(q.name, self.ttl, HELP_TEXT))
+                resp.answer.append(self._help)
                 return resp
             # NODATA at apex.
             resp.authority.append(self._soa_rrset())
@@ -137,7 +151,7 @@ class Resolver:
         # Name exists. TXT (or ANY) has data; NSEC names the successor;
         # other types -> NODATA.
         if q.rdtype in (dns.rdatatype.TXT, dns.rdatatype.ANY):
-            resp.answer.append(make_txt_rrset(q.name, self.ttl, text))
+            resp.answer.append(self._verse_rrset(q.name, text))
             self._maybe_sign(query, resp)
         elif q.rdtype == dns.rdatatype.NSEC and self.verse_signer is not None:
             nsec = self.verse_signer.nsec_for(q.name, self.ttl)

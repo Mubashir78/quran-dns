@@ -9,6 +9,18 @@ class VerseStore:
     def __init__(self, verses: dict[str, dict[str, str]], meta: dict | None = None):
         self._verses = verses
         self.meta = meta or {}
+        self._fold_index: dict[str, list[tuple[str, str]]] = {}
+
+    def _folded(self, lang: str) -> list[tuple[str, str]]:
+        """(ref, casefolded text) in reading order, built once per lang:
+        search() is substring scans, folding dominated its cost."""
+        try:
+            return self._fold_index[lang]
+        except KeyError:
+            idx = [(ref, self._verses[ref].get(lang, "").casefold())
+                   for ref in self._ordered_refs]
+            self._fold_index[lang] = idx
+            return idx
 
     @classmethod
     def from_file(cls, path: str | Path) -> "VerseStore":
@@ -43,10 +55,9 @@ class VerseStore:
         """(ref, snippet) substring matches in reading order."""
         qfold = query.casefold()
         hits = []
-        for ref in self._ordered_refs:
-            text = self._verses[ref].get(lang, "")
-            if qfold in text.casefold():
-                hits.append((ref, text[:120]))
+        for ref, folded in self._folded(lang):
+            if qfold in folded:
+                hits.append((ref, self._verses[ref].get(lang, "")[:120]))
                 if len(hits) >= limit:
                     break
         return hits

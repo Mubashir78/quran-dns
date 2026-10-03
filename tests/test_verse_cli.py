@@ -33,17 +33,29 @@ class ParseRefTest(unittest.TestCase):
     def test_bad_lang_exit2(self):
         self.assertEqual(verse.main(["2:255", "-l", "xx"]), 2)
 
+    def _fake_resps(self, n):
+        import dns.rcode
+        resps = []
+        for _ in range(n):
+            r = mock.Mock()
+            r.rcode.return_value = dns.rcode.NOERROR
+            r.answer = [[mock.Mock()]]
+            resps.append(r)
+        return resps
+
     def test_default_langs_ar_en(self):
         seen = []
-        with mock.patch.object(verse, "get_verse",
-                               side_effect=lambda s, a, la, *_: seen.append(la) or "x"):
+        with mock.patch.object(verse, "fetch_many",
+                               side_effect=lambda names, *a: seen.extend(names)
+                               or self._fake_resps(len(names))), \
+             mock.patch.object(verse, "join_txt", return_value="x"):
             self.assertEqual(verse.main(["112:4", "--no-color"]), 0)
-        self.assertEqual(seen, ["ar", "en"])
+        self.assertEqual([n.split(".")[1] for n in seen], ["ar", "en"])
 
     def test_doh_flag_routes_to_doh_fetch(self):
-        with mock.patch.object(verse, "doh_fetch") as df, \
+        with mock.patch.object(verse, "doh_fetch_many",
+                               side_effect=AssertionError("no wire here")), \
              mock.patch.object(verse, "fetch") as raw:
-            df.side_effect = AssertionError("no wire here")
             r = verse.main(["112:4", "--no-color", "--doh", "https://x.invalid"])
             self.assertEqual(r, 2)  # network fail -> exit 2, proves doh path used
             raw.assert_not_called()
@@ -51,7 +63,14 @@ class ParseRefTest(unittest.TestCase):
 
 class OutputModeTest(unittest.TestCase):
     def _run(self, *argv):
-        with mock.patch.object(verse, "get_verse", return_value="TEXT"):
+        import dns.rcode
+        r = mock.Mock()
+        r.rcode.return_value = dns.rcode.NOERROR
+        r.answer = [[mock.Mock()]]
+        with mock.patch.object(verse, "fetch", return_value=(r, False)), \
+             mock.patch.object(verse, "fetch_many", return_value=[r] * 4), \
+             mock.patch.object(verse, "doh_fetch_many", return_value=[r] * 4), \
+             mock.patch.object(verse, "join_txt", return_value="TEXT"):
             buf = io.StringIO()
             with redirect_stdout(buf):
                 rc = verse.main(list(argv))

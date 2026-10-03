@@ -33,6 +33,38 @@ def fetch(name: str, server: str, port: int, timeout: float):
     return resp, used_tcp
 
 
+def fetch_many(names: list[str], server: str, port: int, timeout: float):
+    """All names over ONE TCP connection, in order.
+
+    Batches (ranges, multi-lang) previously opened one UDP+TCP socket pair
+    per (verse, lang); TCP has no truncation here so one connection serves
+    the whole batch with a single handshake.
+    """
+    import socket
+    import struct
+
+    queries = [dns.message.make_query(n, "TXT") for n in names]
+    out = []
+    with socket.create_connection((server, port), timeout=timeout) as sock:
+        sock.settimeout(timeout)
+        for query in queries:
+            wire = query.to_wire()
+            sock.sendall(struct.pack("!H", len(wire)) + wire)
+            (length,) = struct.unpack("!H", _recvall(sock, 2))
+            out.append(dns.message.from_wire(_recvall(sock, length)))
+    return out
+
+
+def _recvall(sock, n: int) -> bytes:
+    buf = b""
+    while len(buf) < n:
+        chunk = sock.recv(n - len(buf))
+        if not chunk:
+            raise ConnectionError("server closed TCP connection mid-response")
+        buf += chunk
+    return buf
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Fetch a verse over DNS")
     ap.add_argument("ref", help="verse like 2:255, or 'help'")

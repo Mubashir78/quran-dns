@@ -22,7 +22,7 @@ sys.path.insert(0, ".")
 
 import dns.rcode  # noqa: E402
 
-from qdns.client import build_name, fetch  # noqa: E402
+from qdns.client import build_name, fetch, fetch_many  # noqa: E402
 from qdns.config import DEFAULT_LANG, LANGS, ZONE  # noqa: E402
 from qdns.txt import join_txt  # noqa: E402
 
@@ -92,28 +92,26 @@ def parse_ref(ref: str) -> list[tuple[int, int]]:
     return [(s, i) for i in range(a, b + 1)]
 
 
-def get_verse(s: int, a: int, lang: str, server: str, port: int, doh_base: str | None = None):
-    name = build_name(f"{s}:{a}", lang, ZONE)
-    if doh_base is not None:
-        resp = doh_fetch(doh_base, name)
-    else:
-        resp, _ = fetch(name, server, port, 3.0)
-    if resp.rcode() == dns.rcode.NXDOMAIN:
-        raise LookupError(f"{s}:{a} {lang}: not found")
-    return join_txt(resp.answer[0][0])
-
-
-def doh_fetch(base: str, name: str):
-    """DNS-over-HTTPS GET (RFC 8484): works worldwide, no port 53 needed."""
+def doh_fetch_many(base: str, names: list[str]):
+    """All names over ONE HTTPS connection (was: one per pair)."""
     import base64
-    import urllib.request
-    q = dns.message.make_query(name, "TXT")
-    b64 = base64.urlsafe_b64encode(q.to_wire()).rstrip(b"=").decode()
-    req = urllib.request.Request(
-        base.rstrip("/") + "/dns-query?dns=" + b64,
-        headers={"Accept": "application/dns-message"})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return dns.message.from_wire(r.read())
+    import http.client
+    import urllib.parse
+    queries = [dns.message.make_query(n, "TXT") for n in names]
+    parts = urllib.parse.urlsplit(base.rstrip("/") + "/dns-query")
+    conn_cls = http.client.HTTPSConnection if parts.scheme == "https" \
+        else http.client.HTTPConnection
+    out = []
+    conn = conn_cls(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80),
+                    timeout=15)
+    with conn:
+        for query in queries:
+            b64 = base64.urlsafe_b64encode(query.to_wire()).rstrip(b"=").decode()
+            conn.request("GET", parts.path + "?dns=" + b64,
+                         headers={"Accept": "application/dns-message"})
+            r = conn.getresponse()
+            out.append(dns.message.from_wire(r.read()))
+    return out
 
 
 def show_human(s, a, texts: dict[str, str], *, color: bool, mode: str, plain: bool):
@@ -133,24 +131,47 @@ def run(ref: str, langs, args, color: bool) -> int:
     pairs = [(s, a, la) for s, a in verses for la in langs]
     results: dict[tuple[int, int, str], str] = {}
     errors: dict[tuple[int, int, str], tuple[str, int]] = {}
-    import concurrent.futures as _fut
+    names = [build_name(f"{s}:{a}", la, ZONE) for s, a, la in pairs]
 
-    def _one(pair):
+    def _record(pair, resp):
         s, a, la = pair
-        try:
-            return pair, (True, get_verse(s, a, la, args.server, args.port, args.doh))
-        except LookupError as exc:
-            return pair, (False, (f"error: {exc}", 1))
-        except Exception as exc:
-            return pair, (False, (f"error: could not reach {args.server}:{args.port} ({exc})", 2))
+        if resp.rcode() == dns.rcode.NXDOMAIN:
+            errors[pair] = (f"error: {s}:{a} {la}: not found", 1)
+        elif resp.rcode() != dns.rcode.NOERROR or not resp.answer:
+            errors[pair] = (f"error: {s}:{a} {la}: unexpected response", 1)
+        else:
+            results[pair] = join_txt(resp.answer[0][0])
 
-    # Network-bound: fetch all (verse, lang) pairs at once, print in order.
-    with _fut.ThreadPoolExecutor(max_workers=min(len(pairs), 32)) as ex:
-        for pair, outcome in ex.map(_one, pairs):
-            if outcome[0]:
-                results[pair] = outcome[1]
-            else:
-                errors[pair] = outcome[1]
+    def _fail(exc):
+        print(f"error: could not reach {args.server}:{args.port} ({exc})"
+              if args.doh is None else f"error: DoH request failed ({exc})",
+              file=sys.stderr)
+        return 2
+
+    if args.doh is not None:
+        # One HTTPS connection for the whole batch (was: one per pair).
+        try:
+            resps = doh_fetch_many(args.doh, names)
+        except Exception as exc:
+            return _fail(exc)
+        for pair, resp in zip(pairs, resps):
+            _record(pair, resp)
+    elif len(pairs) == 1:
+        try:
+            resp, _ = fetch(names[0], args.server, args.port, 3.0)
+        except Exception as exc:
+            return _fail(exc)
+        _record(pairs[0], resp)
+    else:
+        # One TCP connection for the whole batch (was: one socket pair
+        # per (verse, lang) via threads; TCP never truncates, so the
+        # threads bought nothing but handshakes).
+        try:
+            resps = fetch_many(names, args.server, args.port, 3.0)
+        except Exception as exc:
+            return _fail(exc)
+        for pair, resp in zip(pairs, resps):
+            _record(pair, resp)
     if args.json:
         out = []
     for s, a in verses:

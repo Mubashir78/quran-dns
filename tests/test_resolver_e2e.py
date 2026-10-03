@@ -142,6 +142,21 @@ class ResolverTest(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_rrsets_cached_by_name(self):
+        import dns.message
+        q = dns.message.make_query("1-1.en.quran.test.", "TXT")
+        self.assertIs(RES.handle(q).answer[0], RES.handle(q).answer[0])
+        s = dns.message.make_query("quran.test.", "SOA")
+        self.assertIs(RES.handle(s).answer[0], RES._soa)
+
+    def test_search_index_reused(self):
+        from qdns.store import VerseStore
+        store = VerseStore({"1:1": {"en": "AllahMercy"}, "1:2": {"en": "Mercy worlds"}})
+        first = store.search("mercy", "en")
+        self.assertIn("en", store._fold_index)
+        self.assertEqual(store.search("mercy", "en"), first)
+        self.assertEqual([r for r, _ in first], ["1:1", "1:2"])
+
 
 def free_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -179,6 +194,17 @@ class LiveServerTest(unittest.IsolatedAsyncioTestCase):
         data = await asyncio.wait_for(reader.read(), 5.0)
         self.assertEqual(data, b"")
         writer.close()
+
+    async def test_fetch_many_one_connection(self):
+        from qdns.client import fetch_many
+        resps = await asyncio.to_thread(
+            fetch_many,
+            ["1-1.en.quran.test.", "1-1.ar.quran.test.",
+             "2-282.en.quran.test."],
+            "127.0.0.1", self.port, 3.0)
+        self.assertEqual(len(resps), 3)
+        self.assertEqual(join_txt(resps[0].answer[0][0]), "In the name of Allah")
+        self.assertEqual(join_txt(resps[2].answer[0][0]), LONG)
 
 
 @unittest.skipUnless(Path(DEFAULT_DATA).exists(), "run scripts/fetch_data.py first")

@@ -142,6 +142,11 @@ try {
   html[data-theme="dark"] .passage > .translation {
     border-color: rgba(210, 169, 79, .30);
   }
+  /* Arabic glyphs sit high in the line box (tall marks above, spare room
+     below): extra top padding centers the visible text in its frame. */
+  #verseblock > .arabic, .passage > .arabic {
+    padding: 1.35em 1.1em .75em;
+  }
   body::before {
     content: "";
     position: fixed;

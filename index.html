@@ -142,10 +142,10 @@ try {
   html[data-theme="dark"] .passage > .translation {
     border-color: rgba(210, 169, 79, .30);
   }
-  /* Arabic glyphs sit high in the line box (tall marks above, spare room
-     below): extra top padding centers the visible text in its frame. */
+  /* Arabic glyphs sit slightly high in the line box: a touch of extra
+     top padding centers the visible text in its frame. */
   #verseblock > .arabic, .passage > .arabic {
-    padding: 1.35em 1.1em .75em;
+    padding: 1.1em 1.1em .9em;
   }
   body::before {
     content: "";
@@ -289,14 +289,13 @@ try {
     min-height: 1.5em;
     margin-top: 1.25em;
   }
-  .verify, .progress {
+  .progress {
     text-align: center;
     color: var(--soft-ink);
     font-size: .95rem;
     min-height: 1.5em;
     margin-top: .25em;
   }
-  .verify { color: var(--accent); }
   .daily {
     border-top: 1px solid var(--rule);
     padding: 1.25em 0 0;
@@ -499,7 +498,6 @@ try {
   <p class="translation" id="translation"></p>
 </div>
 <div class="status" id="status" role="status"></div>
-<div class="verify" id="verify" aria-live="polite"></div>
 <div class="progress" id="progress" aria-live="polite"></div>
 <div class="trackctl" id="trackctl" hidden><button type="button" id="undo">Undo this verse</button>
 <button type="button" id="reset">Reset tracker</button></div>
@@ -698,10 +696,6 @@ function markRead(s, a) {
   }
   renderProgress();
 }
-function checkSignature(s, a, lang) {
-  document.getElementById("verify").textContent =
-    "Static copy: verses are baked in, so there is no live signature to check.";
-}
 function show(s, a) {
   var status = document.getElementById("status");
   var block = document.getElementById("verseblock");
@@ -710,7 +704,6 @@ function show(s, a) {
   document.getElementById("reftext").textContent = "Chapter " + s + ", verse " + a;
   maskRefsNow();
   status.textContent = "Reading…";
-  document.getElementById("verify").textContent = "";
   block.innerHTML = '<p class="arabic" id="arabic" dir="rtl" lang="ar"></p>' +
                     '<p class="translation" id="translation"></p>';
   block.classList.add("hidden");
@@ -729,7 +722,6 @@ function show(s, a) {
     block.classList.add("rise");
     applyMemorize();
     markRead(s, a);
-    checkSignature(s, a, lang);
   }).catch(function (err) {
     status.textContent = err.message === "not found"
       ? "That verse is not in this copy."
@@ -961,7 +953,6 @@ function showRange(s, a, b) {
     "Chapter " + s + ", verses " + a + " to " + b;
   maskRefsNow();
   status.textContent = "Reading…";
-  document.getElementById("verify").textContent = "";
   block.classList.add("hidden");
   var jobs = [];
   for (var v = a; v <= b; v++) jobs.push(v);

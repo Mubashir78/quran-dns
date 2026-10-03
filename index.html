@@ -137,6 +137,13 @@ try {
       padding: 2em 2.5em;
     }
     .translation { max-width: none; }
+    /* Search hits use the width too: flowing grid instead of one narrow
+       centered column. Reading elements (header, controls, daily, saved,
+       footer) keep their measure: centered text columns stay readable. */
+    .results { max-width: none; display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(24em, 1fr));
+      gap: .4em 1em; }
+    .results button { margin-bottom: 0; }
   }
   /* Faint inner frames around each text at every width: same equal
      padding on phone and desktop, readability without heaviness. */

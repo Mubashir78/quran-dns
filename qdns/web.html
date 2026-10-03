@@ -127,6 +127,17 @@ try {
     }
     .passage > .ref-text { grid-column: 1 / -1; margin: 0 0 .25em; }
   }
+  /* Very wide screens: frames grow with the viewport instead of
+     hugging a narrow center column. */
+  @media (min-width: 80em) {
+    body { max-width: 76em; }
+    #verseblock:not(:has(.passage)),
+    .passage {
+      gap: 1em 3em;
+      padding: 2em 2.5em;
+    }
+    .translation { max-width: 40em; }
+  }
   /* Faint inner frames around each text at every width: same equal
      padding on phone and desktop, readability without heaviness. */
   #verseblock > .arabic, .passage > .arabic,

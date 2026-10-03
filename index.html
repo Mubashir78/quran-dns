@@ -142,10 +142,11 @@ try {
   html[data-theme="dark"] .passage > .translation {
     border-color: rgba(210, 169, 79, .30);
   }
-  /* Arabic glyphs sit slightly high in the line box: a touch of extra
-     top padding centers the visible text in its frame. */
+  /* Amiri ink sits low in its line box (tall ascender room above,
+     ink reaches the baseline floor): extra bottom padding centers
+     the visible text in its frame. Measured via headless metrics. */
   #verseblock > .arabic, .passage > .arabic {
-    padding: 1.1em 1.1em .9em;
+    padding: .8em 1.1em 1.4em;
   }
   body::before {
     content: "";

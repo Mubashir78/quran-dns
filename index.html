@@ -184,6 +184,25 @@ try {
     z-index: -2;
     pointer-events: none;
   }
+  /* Night/day toggle: manuscript pill, pinned top-right, persisted
+     via qr-theme (see applyTheme). */
+  .themebtn {
+    position: fixed;
+    top: .75em;
+    right: .75em;
+    z-index: 50;
+    min-height: 44px;
+    font-size: .9rem;
+    padding: .5em 1em;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    background: var(--card-soft);
+    color: var(--ink);
+    cursor: pointer;
+    backdrop-filter: blur(2px);
+  }
+  .themebtn:hover { border-width: 2px; padding: calc(.5em - 1px) calc(1em - 1px); }
+  .themebtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   header { text-align: center; margin-bottom: 1.25em; }
   header h1 {
     font-family: Georgia, "Times New Roman", serif;
@@ -482,6 +501,7 @@ try {
 </style>
 </head>
 <body>
+<button type="button" id="theme" class="themebtn" aria-pressed="true" title="Switch manuscript light / night">☾ Night</button>
 <canvas id="wave" aria-hidden="true"></canvas>
 <a class="skip" href="#verseblock">Skip to verse</a>
 <header>
@@ -536,7 +556,6 @@ try {
     <button type="button" id="shrink" class="ghost" aria-label="Smaller Arabic text">A−</button>
     <button type="button" id="grow" class="ghost" aria-label="Larger Arabic text">A+</button>
     <button type="button" id="keysbtn" class="ghost keysbtn" aria-keyshortcuts="?">Keys <kbd>?</kbd></button>
-    <button type="button" id="theme" class="ghost" aria-pressed="true" title="Switch manuscript light / night">☾ Night</button>
   </div>
 </details>
 <dialog id="keys" aria-labelledby="keystitle">

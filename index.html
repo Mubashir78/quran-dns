@@ -70,6 +70,10 @@ try {
     --error: #E89B8A;
   }
   * { box-sizing: border-box; }
+  /* Paint the root too: on fast phone scroll the browser overshoots past
+     body and would flash black/white for an instant. */
+  html { background: #0D110E; }
+  html[data-theme="light"] { background: #EFE8D4; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     background:
@@ -389,7 +393,7 @@ try {
   .nav button { min-height: 44px; }
   .field { display: flex; flex-direction: column; gap: .2em; min-width: 0; }
   @media (max-width: 36em) {
-    body { padding: 1.5em .9em 3em; }
+    body { padding: 1.5em .9em 3em; background-attachment: scroll; }
     header { margin-bottom: 1.5em; }
     header h1 { font-size: 1.35rem; }
     .controls { gap: .6em; margin-bottom: 2em; }

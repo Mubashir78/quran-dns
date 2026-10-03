@@ -206,7 +206,10 @@ try {
   /* Phone: dock bottom-right (thumb zone) so the pill never covers
      the centered subtitle; desktop keeps top-right. */
   @media (max-width: 36em) {
-    .themebtn { top: auto; bottom: 1em; right: .8em; padding: .45em .7em; }
+    /* Solid background, no blur: backdrop-filter repaints every scroll
+       frame and the pill glitches when scrolling fast. */
+    .themebtn { top: auto; bottom: 1em; right: .8em; padding: .45em .7em;
+      background: var(--card); backdrop-filter: none; }
     .themebtn:hover { padding: calc(.45em - 1px) calc(.7em - 1px); }
   }
   header { text-align: center; margin-bottom: 1.25em; }
